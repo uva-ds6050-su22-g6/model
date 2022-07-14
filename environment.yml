@@ -1,0 +1,15 @@
+name: ds6050
+channels:
+  - default
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pandas
+  - tensorflow-gpu
+  - pyarrow 
+  - jupyterlab
+  - pip
+  - pip:
+    - tensorflow-text
+    - tensorflow_hub
+prefix: ./conda
