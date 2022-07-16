@@ -102,16 +102,54 @@ ds_train_tok = ds_train.batch(256).map(tokenize_ds)
 ds_test_tok = ds_test.batch(256).map(tokenize_ds)
 
 # %% Baseline Bert Initialization
+## This is currently broken - Still tryign to get the TFBertModel to accept the token string in.
 max_len = 384
-hf_default_bert = transformers.BertConfig()
 hf_bert_tokenizer_bootstrapper = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
+hf_bert_model = transformers.TFBertModel.from_pretrained("bert-base-uncased")
 
 save_path = Path("data") / "models"
 if not os.path.exists(save_path):
     os.makedirs(save_path, exist_ok=True)
 hf_bert_tokenizer_bootstrapper.save_pretrained(save_path)
+hf_bert_model.save_pretrained(save_path)
 
 # Load the fast tokenizer from saved file
 bert_tokenizer = tokenizers.BertWordPieceTokenizer(str(save_path/"vocab.txt"), lowercase=True)
 
+def tf_hf_bertencode(features, label):
+    x = bert_tokenizer.encode(tf.compat.as_str(features), add_special_tokens=True)
+    y = bert_tokenizer.encode(tf.compat.as_str(label), add_special_tokens=True)
+    return x, y
 
+def tf_hf_bertencodeds(features, label):
+    encode = tf.py_function(func=tf_hf_bertencode, inp=[features, label], Tout=[tf.int64, tf.int64])
+    return encode
+
+encoded_input = ds_train.batch(256).map(tf_hf_bertencodeds)
+output = transformers.TFBertModel(config=transformers.PretrainedConfig.from_json_file(str(save_path/"config.json")))
+hf_bert = output(encoded_input)
+
+
+# %% Custom Tokenizer Mode
+
+files = [] # Need to explode train_ds to sep files
+
+tokenizer = tokenizers.BertWordPieceTokenizer(
+    clean_text=True,
+    handle_chinese_chars=True,
+    strip_accents=True,
+    lowercase=True,
+)
+
+tokenizer.train(
+    files,
+    vocab_size=10000,
+    min_frequency=2,
+    show_progress=True,
+    special_tokens=["[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]"],
+    limit_alphabet=1000,
+    wordpieces_prefix="##",
+)
+
+# Save the files
+tokenizer.save_model(args.out, args.name)
