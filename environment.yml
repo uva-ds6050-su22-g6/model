@@ -4,13 +4,15 @@ channels:
   - conda-forge
 dependencies:
   - python=3.9
-  - pandas
   - tensorflow-gpu
-  - pyarrow 
-  - jupyterlab
   - pip
   - pip:
     - tensorflow-text
     - tensorflow_hub
     - jupytext
+    - numpy
+    - ipython
+    - jupyterlab
+    - pandas
+    - pyarrow 
 prefix: ./conda
