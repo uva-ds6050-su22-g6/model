@@ -43,11 +43,18 @@
 # %autosave 0
 
 # %% Data setup
+import os
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from tensorflow import keras
 import tensorflow_text as tf_text
+import tokenizers
+import transformers
+
+from tensorflow import keras
+
 
 np.random.seed(42)
 tf.random.set_seed(42)
@@ -94,4 +101,17 @@ def tokenize_ds(X, label):
 ds_train_tok = ds_train.batch(256).map(tokenize_ds)
 ds_test_tok = ds_test.batch(256).map(tokenize_ds)
 
-# %%
+# %% Baseline Bert Initialization
+max_len = 384
+hf_default_bert = transformers.BertConfig()
+hf_bert_tokenizer_bootstrapper = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
+
+save_path = Path("data") / "models"
+if not os.path.exists(save_path):
+    os.makedirs(save_path, exist_ok=True)
+hf_bert_tokenizer_bootstrapper.save_pretrained(save_path)
+
+# Load the fast tokenizer from saved file
+bert_tokenizer = tokenizers.BertWordPieceTokenizer(str(save_path/"vocab.txt"), lowercase=True)
+
+

@@ -131,3 +131,6 @@ dmypy.json
 data/*.feather
 data/*.csv
 data/*.bz2
+data/models
+
+.idea

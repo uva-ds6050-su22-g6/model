@@ -14,5 +14,7 @@ dependencies:
     - ipython
     - jupyterlab
     - pandas
-    - pyarrow 
+    - pyarrow
+    - tokenizers
+    - transformers
 prefix: ./conda
