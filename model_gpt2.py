@@ -29,14 +29,9 @@
 # Fine-tuning language models on domain-specific vocabulary with small data sizes still presents a challenge to the language community, but the growing availability of LLMs to augment such models alleviates the challenge.
 # This paper explores different techniques to be applied on existing language models (LMs), built highly complex Deep Learning models, and investigates how to fine-tune these models, such that a pre-trained model is used to enrich a more domain-specific model that may be limited in textual data.
 #
-# ## Project Objective
+# ## Notebook Objective
 #
-# We are aiming on using several small domain specific language tasks, particularly classification tasks.
-# We aim to take at least two models, probably BERT and distill-GPT2 as they seem readily available on HuggingFace and TensorFlow's model hub.
-# We will iterate through different variants of layers we fine tune and compare these results with fully trained models, and ideally find benchmarks already in academic papers on all of the datasets.
-#
-# We aim to optimize compute efficiency and also effectiveness of the model on the given dataset. Our goal is to find a high performing and generalizable method for our fine tuning process and share this in our paper.
-#
+# With this notebook, we set the objective of scoring the perofrmance of a GPT2 model against our dataset.
 
 # %% colab={"base_uri": "https://localhost:8080/", "height": 35} id="f8971652" outputId="cf33b1a6-447c-499a-e283-8feaeda3db69"
 # %autosave 0
@@ -73,7 +68,7 @@ options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoSha
 np.random.seed(42)
 tf.random.set_seed(42)
 
-df = pd.read_feather("data/dataset.feather")#.set_index('index')
+df = pd.read_feather("data/dataset.feather")
 df['topic'] = df['topic'].str.split('.').str[0]
 df_train = df.sample(frac = 0.8)
 df_test = df.drop(df_train.index)
@@ -82,18 +77,15 @@ features = 'content' # feature for the future - add all the datasets ['categorie
 label = 'topic'
 
 # %% colab={"base_uri": "https://localhost:8080/"} id="k98DISb3X2Yr" outputId="05774065-7efc-40f7-8874-8373627e19f3"
-# strategy = tf.distribute.MirroredStrategy()
 ohe = OneHotEncoder()
 
 # 7 different topics
-# y_ = ohe.fit_transform(df['topic'].values.reshape(-1,1)).toarray()
 y_train = ohe.fit_transform(df_train['topic'].values.reshape(-1,1)).toarray()
 y_test  = ohe.fit_transform(df_test['topic'].values.reshape(-1,1)).toarray()
 
 max_len = 512
 checkpoint = 'gpt2'
 hf_gpt2_tokenizer = transformers.GPT2TokenizerFast.from_pretrained(checkpoint, add_prefix_space=True)
-# hf_gpt2_model = transformers.GPT2ForSequenceClassification.from_pretrained(checkpoint)
 
 # add for gpt2 padding
 if hf_gpt2_tokenizer.pad_token is None:
@@ -134,18 +126,19 @@ test_encodings  = hf_gpt2_tokenizer.batch_encode_plus(list(df_test.summary.value
                                                       truncation=True)
 
 # %% colab={"base_uri": "https://localhost:8080/"} id="XaMC57JY4YRv" outputId="d5349c8f-6d36-430c-9c4a-7f98a09f5fe2"
+# Construct model
 with strategy.scope():
     hf_gpt2_model = transformers.TFGPT2Model.from_pretrained(checkpoint)
     hf_gpt2_model.resize_token_embeddings(len(hf_gpt2_tokenizer))
     model = model_top(hf_gpt2_model)
-model.summary()
+model.summary(line_length=120, show_trainable=True)
 
 # %% colab={"base_uri": "https://localhost:8080/"} id="D-aZgu9qGb6i" outputId="ab50b35a-ebd5-48b6-d1e3-a0e3d62359e8"
 model.layers
 
 # %% id="bc4MEFDK4b0b" colab={"base_uri": "https://localhost:8080/"} outputId="6f1fcfd1-13a6-4e4e-edda-4f38916d81ab"
 model.layers[2].trainable = False
-model.summary()
+model.summary(line_length=120, show_trainable=True)
 
 # %% colab={"base_uri": "https://localhost:8080/"} id="Ky67OTAeUjwf" outputId="395cd630-d195-4787-8ac4-5db06d6e020b"
 # !nvidia-smi
@@ -163,7 +156,7 @@ with strategy.scope():
 
     early_stopping_callback = tf.keras.callbacks.EarlyStopping(
         monitor="val_loss",
-        patience=1,
+        patience=3,
         mode="auto",
     )
 
@@ -180,7 +173,7 @@ with strategy.scope():
     ds_val = ds_shuffle.skip(train_size).batch(32).with_options(options)
     
     ds_y = [x[1].numpy() for x in ds_train]
-    ds_y_train = np.concatenate(ds_y_train)
+    ds_y_train = np.concatenate(ds_y)
     
     history = model.fit(ds_train,
                         validation_data=ds_val,
@@ -218,7 +211,7 @@ sns.lineplot(x = 'epoch', y = 'value', hue = 'variable', data = history_df);
 ax.set_xlabel('Epoch', fontsize = 12);
 ax.set_ylabel(''); 
 ax.set_title('Accuracy and Loss with Training, GPT-2', loc = 'left', fontsize = 20); 
-ax.xaxis.set_ticklabels(['','1','','','','2','','','','3']); 
+#ax.xaxis.set_ticklabels(['','1','','','','2','','','','3']); 
 plt.tight_layout()
 plt.show()
 
@@ -237,50 +230,51 @@ predict_test_data = model.predict(test_ds)
 pred_test_data = np.argmax(predict_test_data, axis = 1)
 test_cm = confusion_matrix(np.argmax(y_test, axis = 1), pred_test_data)
 
+# Construct untrained model performance
+bat_size=32
+model_untr = model_top(hf_gpt2_model)
+untr_pred_train = model_untr.predict(ds_train, 
+                                     batch_size=bat_size)
+untr_train_cm = confusion_matrix(np.argmax(ds_y_train, axis = 1), 
+                                 np.argmax(untr_pred_train, axis = 1))
+
+untr_pred_test = model_untr.predict(ds_test, 
+                                    batch_size=bat_size)
+untr_test_cm = confusion_matrix(np.argmax(y_test, axis = 1), 
+                                np.argmax(untr_pred_test, axis = 1))
+
 labels = list(df['topic'].unique())
 labels.sort()
 x_labs = labels
 labels.sort(reverse = True)
 y_labs = labels
 
+## function for visualizing confusion matrices
 def plot_cm(cm, title = 'Confusion Matrix'):
-  fig, ax = plt.subplots(1, 1, figsize = (14,8))
-  sns.heatmap(cm/np.sum(cm), annot=True, fmt='.2%', cmap='Blues');
+  fig = plt.figure(figsize = (14,8))
+  ax = sns.heatmap(cm/np.sum(cm), annot=True, fmt='.2%', cmap='Blues');
   # labels, title and ticks
   ax.set_xlabel('Predicted category', fontsize = 12);
   ax.set_ylabel('Actual category', fontsize = 12); 
   ax.set_title(title, fontsize = 20); 
   ax.xaxis.set_ticklabels(x_labs, fontsize = 8); 
   ax.yaxis.set_ticklabels(y_labs, fontsize = 8);
+
+  ax.set_facecolor('w')
+  fig.set_facecolor('w')
+  
   plt.tight_layout()
   plt.show()
 
 
 # %%
-plot_cm(train_cm, 'Confusion Matrix, Training Data')
+plot_cm(train_cm, 'GPT-2 Confusion Matrix, Training Data')
 
 # %%
-plot_cm(test_cm, 'Confusion Matrix, Testing Data')
-
-# %% colab={"base_uri": "https://localhost:8080/", "height": 585} id="93gFu-nKQg0d" outputId="80ce6291-2203-4d0a-ec16-d2f56a3bc73d"
-# evaluating with non-fine tuned pretrained GPT-2 model
-
-bat_size=32
-
-with strategy.scope():
-    model_untr = model_top(hf_gpt2_model)
-    untr_pred_train = model_untr.predict(ds_train, 
-                                         batch_size=bat_size)
-    untr_train_cm = confusion_matrix(np.argmax(ds_y_train, axis = 1), 
-                                     np.argmax(untr_pred_train, axis = 1))
-
-    untr_pred_test = model_untr.predict(ds_test, 
-                                        batch_size=bat_size)
-    untr_test_cm = confusion_matrix(np.argmax(y_test, axis = 1), 
-                                    np.argmax(untr_pred_test, axis = 1))
+plot_cm(test_cm, 'GPT-2 Confusion Matrix, Testing Data')
 
 # %%
-plot_cm(untr_train_cm, 'Confusion Matrix, Training Data (not fine-tuned)')
+plot_cm(untr_train_cm, 'GPT-2 Confusion Matrix, Training Data (not fine-tuned)')
 
 # %%
 plot_cm(untr_test_cm, 'Confusion Matrix, Testing Data (not fine-tuned)')
@@ -314,6 +308,48 @@ ax.set_ylabel('F1 Score');
 ax.set_title('F1 Score in Training and Testing Data, GPT-2', fontsize = 20); 
 ax.xaxis.set_ticklabels(labels); 
 ax.set_ylim([0, 1]);
+
+ax.set_facecolor('w')
+fig.set_facecolor('w')
+
+plt.tight_layout()
+plt.show()
+
+# %%
+# see f1 scores for non-fine tuned model
+# threshold is just median/mean rounded up to the nearest 0.15
+f1_metric_untr = tfa.metrics.F1Score(num_classes = 7, threshold = 0.15)
+f1_metric_untr.update_state(ds_y_train, untr_pred_train)
+untr_train_f1 = f1_metric_untr.result()
+f1_metric_untr.update_state(y_test,  untr_pred_test)
+untr_test_f1 = f1_metric_untr.result()
+
+# turn to dataframe
+untr_train_f1 = pd.Series(untr_train_f1.numpy()).reset_index()\
+                  .rename(columns = {'index': 'category', 0: 'f1'})
+untr_train_f1['type'] = 'train'
+untr_test_f1  = pd.Series(untr_test_f1.numpy()).reset_index()\
+                  .rename(columns  = {'index': 'category', 0: 'f1'})
+untr_test_f1['type']  = 'test'
+
+untr_gpt2_f1 = pd.concat([untr_train_f1, untr_test_f1]).reset_index(drop = True)\
+                 .replace({'category': {t: idx for idx, t in zip(sorted(df['topic'].unique()), range(7))}})\
+                 .sort_values(by = ['category', 'type'], ascending = False)
+
+# plotting
+plt.figure(figsize = (14,8))
+# can't get it to sort alphabetically for some reason
+ax = sns.barplot(x = 'category', y = 'f1', hue = 'type', data = untr_gpt2_f1, order = list(set(untr_gpt2_f1.category)));
+# labels, title and ticks
+ax.set_xlabel('Category', fontsize = 12);
+ax.set_ylabel('F1 Score'); 
+ax.set_title('F1 Score in Training and Testing Data, GPT-2 (not fine-tuned)', fontsize = 20); 
+ax.xaxis.set_ticklabels(labels); 
+ax.set_ylim([0, 1]);
+
+ax.set_facecolor('w')
+fig.set_facecolor('w')
+
 plt.tight_layout()
 plt.show()
 
