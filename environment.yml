@@ -1,4 +1,4 @@
-name: ds6050-2
+name: ds6050
 channels:
   - conda-forge
   - defaults
@@ -61,7 +61,6 @@ dependencies:
   - icu=70.1=h27087fc_0
   - idna=3.3=pyhd8ed1ab_0
   - importlib-metadata=4.11.4=py39hf3d152e_0
-  - ipykernel=6.9.1=py39h06a4308_0
   - ipython=8.4.0=py39h06a4308_0
   - ipython_genutils=0.2.0=pyhd3eb1b0_1
   - jedi=0.18.1=py39h06a4308_1
@@ -72,7 +71,6 @@ dependencies:
   - jupyter_client=7.2.2=py39h06a4308_0
   - jupyter_core=4.10.0=py39h06a4308_0
   - jupyter_server=1.17.1=py39h06a4308_0
-  - jupyterlab=3.3.2=pyhd3eb1b0_0
   - jupyterlab_pygments=0.1.2=py_0
   - jupyterlab_server=2.12.0=py39h06a4308_0
   - keras-preprocessing=1.1.2=pyhd8ed1ab_0
@@ -186,7 +184,6 @@ dependencies:
   - wcwidth=0.2.5=pyhd3eb1b0_0
   - webencodings=0.5.1=py39h06a4308_1
   - websocket-client=0.58.0=py39h06a4308_4
-  - werkzeug=2.1.2=pyhd8ed1ab_1
   - wheel=0.37.1=pyhd8ed1ab_0
   - wrapt=1.14.1=py39hb9d737c_0
   - xz=5.2.5=h516909a_1
@@ -196,19 +193,49 @@ dependencies:
   - zlib=1.2.12=h166bdaf_2
   - zstd=1.5.2=h8a70e8d_2
   - pip:
+    - cycler==0.11.0
     - filelock==3.7.1
+    - flask==2.2.2
     - flatbuffers==1.12
+    - fonttools==4.34.4
     - gast==0.4.0
     - huggingface-hub==0.8.1
+    - inflect==6.0.0
+    - ipykernel==6.15.1
+    - ipywidgets==7.7.1
+    - itsdangerous==2.1.2
     - joblib==1.1.0
+    - jupyter==1.0.0
+    - jupyter-console==6.4.4
+    - jupyter-server==1.18.1
+    - jupyterlab==3.4.4
+    - jupyterlab-widgets==1.1.1
+    - jupytext==1.14.1
     - keras==2.9.0
+    - kiwisolver==1.4.4
     - libclang==14.0.1
+    - lightgbm==3.3.2
+    - markdown-it-py==2.1.0
+    - matplotlib==3.5.2
+    - mdit-py-plugins==0.3.0
+    - mdurl==0.1.1
+    - nbdiff==1.0.3
+    - nltk==3.7
+    - pillow==9.2.0
     - protobuf==3.19.4
+    - pydantic==1.9.1
+    - pydot==1.4.2
     - pyparsing==3.0.9
+    - pystemmer==2.0.1
+    - python-levenshtein==0.12.2
+    - qtconsole==5.3.1
+    - qtpy==2.1.0
     - regex==2022.7.25
     - scikit-learn==1.1.2
+    - seaborn==0.11.2
     - tensorboard==2.9.1
     - tensorflow==2.9.1
+    - tensorflow-addons==0.17.1
     - tensorflow-estimator==2.9.0
     - tensorflow-hub==0.12.0
     - tensorflow-io-gcs-filesystem==0.26.0
@@ -216,4 +243,11 @@ dependencies:
     - threadpoolctl==3.1.0
     - tokenizer==3.4.1
     - tokenizers==0.12.1
+    - toml==0.10.2
+    - torch==1.12.1
     - transformers==4.21.1
+    - typeguard==2.13.3
+    - werkzeug==2.2.2
+    - widgetsnbextension==3.6.1
+    - xgboost==1.6.1
+prefix: /home/uqq5zz/.conda/envs/ds6050
